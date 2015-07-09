@@ -173,7 +173,7 @@ func TestQQ(t *testing.T) {
 		{testStruct, "baz", 123.1},
 		{testStruct, "array/0/foo", 1},
 		{testStruct, "array/0/bar", 0}, // not set from json
-		{testStruct, "array/0/0", nil},  // wrong type of key, but strconv doesnt mind
+		{testStruct, "array/0/0", nil}, // wrong type of key, but strconv doesnt mind
 		{testStruct, "array/0/notexist", nil},
 		{testStruct, "subobj/subarray", []int{1, 2, 3}},
 		{testStruct, "subobj/subsubobj/array/1", "world"},
@@ -199,14 +199,13 @@ func TestQQ(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	if v := String(testStruct, "subobj","subsubobj","array", "1"); v != "world" {
+	if v := String(testStruct, "subobj", "subsubobj", "array", "1"); v != "world" {
 		t.Errorf("%#v [%q]:  expected %v, got %v (%T)", testStruct, "subobj/subsubobj/array/1", "world", v, v)
 	}
 }
 
 func TestInt(t *testing.T) {
-	if v := Int(testStruct, "subobj","subsubobj","bar"); v != 2 {
+	if v := Int(testStruct, "subobj", "subsubobj", "bar"); v != 2 {
 		t.Errorf("%#v [%q]:  expected %v, got %v (%T)", testStruct, "subobj/subsubobj/bar", 1, v, v)
 	}
 }
-

@@ -196,17 +196,18 @@ var zeroTime time.Time
 
 // Time returns the string found at path, parsed as an RFC3339 formatted date
 // and time "2006-01-02T15:04:05Z07:00" with optional fractional second or the
-// zero time in all other cases.
+// time object found at that path, or the zero time in all other cases.
 func Time(root interface{}, index ...interface{}) time.Time {
-	s, ok := Q(root, index...).(string)
-	if !ok {
-		return zeroTime
-	}
-	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
-		return t
-	}
-	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return t
+	switch v := Q(root, index...).(type) {
+	case string:
+		if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
+			return t
+		}
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			return t
+		}
+	case time.Time:
+		return v
 	}
 	return zeroTime
 }
