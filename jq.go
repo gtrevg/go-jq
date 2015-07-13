@@ -43,13 +43,12 @@ func (q quantifier) String() string {
 // it will return Q applied to the corresponding value with the
 // remainder of the index.
 //
-// If the first element of index is the special value jq.ALL, Q returns multiple values
-// as follows:
-// If root is a struct or a map and, Q returns a map of the field names or keys
-// of root to the result of Q applied to the corresponding values with the
-// remainder of the index.
-// If root is a slice or array, Q returns a slice of the results of Q applied to
-// the elements of root with the remainder of the index.
+// If the first element of index is the special value ALL, Q returns multiple values as follows:
+// If root is a struct or a map Q returns a map of the field names or keys
+// of root to the result of Q applied to the corresponding values with the remainder of the index,
+// but any errors are omitted from the result set.
+// If root is a slice or array, Q returns a slice of the results of Q
+// applied to the elements of root with the remainder of the index.
 //
 // If the value is not present, Q returns nil, but if the
 // index has the wrong type for the root element it will return an error.
