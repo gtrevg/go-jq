@@ -65,62 +65,63 @@ func Q(root interface{}, index ...interface{}) interface{} {
 		return root
 	}
 
-	if i, ok := index[0].(quantifier); ok {
-		if i == ALL {
-			switch v := reflect.ValueOf(root); v.Kind() {
-			case reflect.Struct:
-				m := make(map[string]interface{})
-				for ii := 0; ii < v.NumField(); ii++ {
-					f := v.Type().Field(ii)
-					if f.PkgPath != "" { // not exported
-						continue
-					}
-					r := v.Field(ii)
-					if !r.IsValid() {
-						continue
-					}
-					rr := Q(r.Interface(), index[1:]...)
-					// Fields will typically vary in type, and many of them may not be indexable
-					// like the rest of the query requires.  It seems more convenient for the user
-					// to just filter these elements out here.
-					if _, ok := rr.(error); ok {
-						continue
-					}
-					m[f.Name] = rr
+	if i, ok := index[0].(quantifier); ok && i == ALL {
+		switch v := reflect.ValueOf(root); v.Kind() {
+		case reflect.Struct:
+			m := make(map[string]interface{})
+			for ii := 0; ii < v.NumField(); ii++ {
+				f := v.Type().Field(ii)
+				if f.PkgPath != "" { // not exported
+					continue
 				}
-				return m
-
-			case reflect.Map:
-				k := v.Type().Key()
-				var dum []interface{} // dont know how else to make typeof interface.
-				m := reflect.MakeMap(reflect.MapOf(k, reflect.TypeOf(dum).Elem()))
-				for _, kk := range v.MapKeys() {
-					vv := v.MapIndex(kk)
-					rr := Q(vv.Interface(), index[1:]...)
-					if rr == nil {
-						continue
-					}
-					// see above
-					if _, ok := rr.(error); ok {
-						continue
-					}
-					m.SetMapIndex(kk, reflect.ValueOf(rr))
+				r := v.Field(ii)
+				if !r.IsValid() {
+					continue
 				}
-				return m.Interface()
-
-			case reflect.Array, reflect.Slice:
-				var a []interface{}
-				for ii := 0; ii < v.Len(); ii++ {
-					r := v.Index(ii)
-					if r.IsValid() {
-						a = append(a, Q(r.Interface(), index[1:]...))
-					}
+				rr := Q(r.Interface(), index[1:]...)
+				// Fields will typically vary in type, and many of them may not be indexable
+				// like the rest of the query requires.  It seems more convenient for the user
+				// to just filter these elements out here.
+				if _, ok := rr.(error); ok {
+					continue
 				}
-				return a
+				m[f.Name] = rr
 			}
-			return fmt.Errorf("type %T does not support retrieving ALL", root)
+			return m
+
+		case reflect.Map:
+			k := v.Type().Key()
+			var dum []interface{} // dont know how else to make typeof interface.
+			m := reflect.MakeMap(reflect.MapOf(k, reflect.TypeOf(dum).Elem()))
+			for _, kk := range v.MapKeys() {
+				vv := v.MapIndex(kk)
+				rr := Q(vv.Interface(), index[1:]...)
+				if rr == nil {
+					continue
+				}
+				// see above
+				if _, ok := rr.(error); ok {
+					continue
+				}
+				m.SetMapIndex(kk, reflect.ValueOf(rr))
+			}
+			return m.Interface()
+
+		case reflect.Array, reflect.Slice:
+			var a []interface{}
+			for ii := 0; ii < v.Len(); ii++ {
+				r := v.Index(ii)
+				if r.IsValid() {
+					a = append(a, Q(r.Interface(), index[1:]...))
+				}
+			}
+			return a
 		}
-		panic(fmt.Errorf("unsupported quantifier %d", i))
+		return fmt.Errorf("type %T does not support retrieving ALL", root)
+	}
+
+	if v, ok := index[0].(quantifier); ok {
+		panic(fmt.Errorf("unsupported %s", v))
 	}
 
 	switch v := reflect.ValueOf(root); v.Kind() {
