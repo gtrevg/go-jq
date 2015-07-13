@@ -94,22 +94,26 @@ func TestQ(t *testing.T) {
 		{map[uint]string{0: "1", 1: "2"}, []interface{}{"-4"}, ee},
 		{map[uint]string{0: "1", 1: "2"}, []interface{}{"boo"}, ee},
 		{testObj, nil, testObj},
-		{testObj, []interface{}{"foo"}, 1.}, // json.Unmarshal turns all numbers into floats
+		{testObj, []interface{}{"foo"}, 1.},                                        // json.Unmarshal turns all numbers into floats
+		{testObj, []interface{}{ALL, "foo"}, map[string]interface{}{"subobj": 1.}}, // quantifier on map
 		{testObj, []interface{}{"baz"}, 123.1},
 		{testObj, []interface{}{"array"}, []interface{}{map[string]interface{}{"foo": 1.}, map[string]interface{}{"bar": 2.}, map[string]interface{}{"baz": 3.}}},
 		{testObj, []interface{}{"array", 0}, map[string]interface{}{"foo": 1.}},
 		{testObj, []interface{}{"array", 0, "foo"}, 1.},
+		{testObj, []interface{}{"array", ALL, "foo"}, []interface{}{1., nil, nil}}, //quantifier on array
 		{testObj, []interface{}{"array", 0, "bar"}, nil},
 		{testObj, []interface{}{"subobj", "subarray"}, []interface{}{1., 2., 3.}},
 		{testObj, []interface{}{"subobj", "subarray", 0}, 1.},
 		{testStruct, nil, testStruct},
 		{testStruct, []interface{}{"foo"}, 1},
+		{testStruct, []interface{}{ALL, "foo"}, map[string]interface{}{"Subobj": 1}}, // quantifier on struct
 		{testStruct, []interface{}{"test"}, "Hello, world!"},
 		{testStruct, []interface{}{"test/bla"}, nil},
 		{testStruct, []interface{}{"baz"}, 123.1},
 		{testStruct, []interface{}{"array", 0, "foo"}, 1},
-		{testStruct, []interface{}{"array", 0, "bar"}, 0}, // not set from json
-		{testStruct, []interface{}{"array", 0, 0}, ee},    // wrong type of key
+		{testStruct, []interface{}{"array", ALL, "foo"}, []interface{}{1, 0, 0}}, // quantifier on array
+		{testStruct, []interface{}{"array", 0, "bar"}, 0},                        // not set from json
+		{testStruct, []interface{}{"array", 0, 0}, ee},                           // wrong type of key
 		{testStruct, []interface{}{"array", 0, "notexist"}, nil},
 		{testStruct, []interface{}{"subobj", "subarray"}, []int{1, 2, 3}},
 		{testStruct, []interface{}{"subobj", "subarray", 0}, 1},
@@ -172,8 +176,9 @@ func TestQQ(t *testing.T) {
 		{testStruct, "foo", 1},
 		{testStruct, "baz", 123.1},
 		{testStruct, "array/0/foo", 1},
-		{testStruct, "array/0/bar", 0}, // not set from json
-		{testStruct, "array/0/0", nil}, // wrong type of key, but strconv doesnt mind
+		{testStruct, "array/*/foo", []interface{}{1, 0, 0}}, // ALL quantifier on array
+		{testStruct, "array/0/bar", 0},                      // not set from json
+		{testStruct, "array/0/0", nil},                      // wrong type of key, but strconv doesnt mind
 		{testStruct, "array/0/notexist", nil},
 		{testStruct, "subobj/subarray", []int{1, 2, 3}},
 		{testStruct, "subobj/subsubobj/array/1", "world"},

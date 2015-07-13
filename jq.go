@@ -15,24 +15,105 @@ import (
 	"time"
 )
 
-// Q queries the root object with the path composed of the indices.
+type quantifier int
+
+const (
+	ALL quantifier = iota
+)
+
+func (q quantifier) String() string {
+	switch q {
+	case ALL:
+		return "ALL"
+	}
+	return fmt.Sprintf("<quantifier %d>", int(q))
+}
+
+// Q recursively queries the root object with the path composed of the indices.
 //
-// If the index is empty, it returns root.
+// If index has no elements, it returns root.
 //
-// Otherwise, if root is a struct or a map with a string key type
-// and the index is a string, it will return Q applied to the corresponding
-// field or map value with the remainder of the index.
+// If root is a struct or a map with a string key type
+// and the first element of index is a string,
+// it will return Q applied to the corresponding field or map value
+// with the remainder of the index.
 //
-// Otherwise, if root is an array or slice, or a map with integer key type,
-// and the index is an integer type or a string that parses as an integer type
+// If root is an array or slice, or a map with integer key type,
+// and the first element of index is an integer type or a string that parses as an integer type
 // it will return Q applied to the corresponding value with the
 // remainder of the index.
+//
+// If the first element of index is the special value jq.ALL, Q returns multiple values
+// as follows:
+// If root is a struct or a map and, Q returns a map of the field names or keys
+// of root to the result of Q applied to the corresponding values with the
+// remainder of the index.
+// If root is a slice or array, Q returns a slice of the results of Q applied to
+// the elements of root with the remainder of the index.
 //
 // If the value is not present, Q returns nil, but if the
 // index has the wrong type for the root element it will return an error.
 func Q(root interface{}, index ...interface{}) interface{} {
 	if len(index) == 0 {
 		return root
+	}
+
+	if i, ok := index[0].(quantifier); ok {
+		if i == ALL {
+			switch v := reflect.ValueOf(root); v.Kind() {
+			case reflect.Struct:
+				m := make(map[string]interface{})
+				for ii := 0; ii < v.NumField(); ii++ {
+					f := v.Type().Field(ii)
+					if f.PkgPath != "" { // not exported
+						continue
+					}
+					r := v.Field(ii)
+					if !r.IsValid() {
+						continue
+					}
+					rr := Q(r.Interface(), index[1:]...)
+					// Fields will typically vary in type, and many of them may not be indexable
+					// like the rest of the query requires.  It seems more convenient for the user
+					// to just filter these elements out here.
+					if _, ok := rr.(error); ok {
+						continue
+					}
+					m[f.Name] = rr
+				}
+				return m
+
+			case reflect.Map:
+				k := v.Type().Key()
+				var dum []interface{} // dont know how else to make typeof interface.
+				m := reflect.MakeMap(reflect.MapOf(k, reflect.TypeOf(dum).Elem()))
+				for _, kk := range v.MapKeys() {
+					vv := v.MapIndex(kk)
+					rr := Q(vv.Interface(), index[1:]...)
+					if rr == nil {
+						continue
+					}
+					// see above
+					if _, ok := rr.(error); ok {
+						continue
+					}
+					m.SetMapIndex(kk, reflect.ValueOf(rr))
+				}
+				return m.Interface()
+
+			case reflect.Array, reflect.Slice:
+				var a []interface{}
+				for ii := 0; ii < v.Len(); ii++ {
+					r := v.Index(ii)
+					if r.IsValid() {
+						a = append(a, Q(r.Interface(), index[1:]...))
+					}
+				}
+				return a
+			}
+			return fmt.Errorf("type %T does not support retrieving ALL", root)
+		}
+		panic(fmt.Errorf("unsupported quantifier %d", i))
 	}
 
 	switch v := reflect.ValueOf(root); v.Kind() {
@@ -131,16 +212,22 @@ func Q(root interface{}, index ...interface{}) interface{} {
 			return fmt.Errorf("cannot use %v (type %T) as array index", index[0], index[0])
 		}
 	}
+
 	return fmt.Errorf("type %T does not support indexing", root)
 }
 
-// QQ splits the single argument 'index' on slashes and calls Q with the resulting index array
+// QQ splits the single argument 'index' on slashes and calls Q with the resulting index array.
+// an index element named "*" will be mapped to the jq.ALL value.
 func QQ(root interface{}, index string) interface{} {
 	var pp []interface{}
 	if index != "" {
 		parts := strings.Split(index, "/")
 		for _, v := range parts {
-			pp = append(pp, v)
+			if v == "*" {
+				pp = append(pp, ALL)
+			} else {
+				pp = append(pp, v)
+			}
 		}
 	}
 	return Q(root, pp...)
