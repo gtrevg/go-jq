@@ -29,6 +29,14 @@ func (q quantifier) String() string {
 	return fmt.Sprintf("<quantifier %d>", int(q))
 }
 
+func isSigned(k reflect.Kind) bool {
+	switch k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return true
+	}
+	return false
+}
+
 // Q recursively queries the root object with the path composed of the indices.
 //
 // If index has no elements, it returns root.
@@ -140,7 +148,8 @@ func Q(root interface{}, index ...interface{}) interface{} {
 				return fmt.Errorf("cannot use %v (type %T) as map key of type %s", index[0], index[0], k)
 			}
 
-		case reflect.Uint, reflect.Uintptr, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		case reflect.Uint, reflect.Uintptr, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+			reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			switch i := reflect.ValueOf(index[0]); i.Kind() {
 			case reflect.Uint, reflect.Uintptr, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 				reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -149,32 +158,21 @@ func Q(root interface{}, index ...interface{}) interface{} {
 				}
 				return nil
 			case reflect.String:
-				idx, err := strconv.ParseUint(i.String(), 0, 64)
-				if err != nil {
-					return fmt.Errorf("cannot parse %v (type %T) as map key of type %s: %v)", index[0], index[0], k, err)
+				var idxv reflect.Value
+				if isSigned(k.Kind()) {
+					idx, err := strconv.ParseInt(i.String(), 0, 64)
+					if err != nil {
+						return fmt.Errorf("cannot parse %v (type %T) as map key of type %s: %v)", index[0], index[0], k, err)
+					}
+					idxv = reflect.ValueOf(idx)
+				} else {
+					idx, err := strconv.ParseUint(i.String(), 0, 64)
+					if err != nil {
+						return fmt.Errorf("cannot parse %v (type %T) as map key of type %s: %v)", index[0], index[0], k, err)
+					}
+					idxv = reflect.ValueOf(idx)
 				}
-				if vv := v.MapIndex(reflect.ValueOf(idx).Convert(k)); vv.IsValid() {
-					return Q(vv.Interface(), index[1:]...)
-				}
-				return nil
-			default:
-				return fmt.Errorf("cannot use %v (type %T) as map key of type %s", index[0], index[0], k)
-			}
-
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			switch i := reflect.ValueOf(index[0]); i.Kind() {
-			case reflect.Uint, reflect.Uintptr, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-				reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				if vv := v.MapIndex(i.Convert(k)); vv.IsValid() {
-					return Q(vv.Interface(), index[1:]...)
-				}
-				return nil
-			case reflect.String:
-				idx, err := strconv.ParseInt(i.String(), 0, 64)
-				if err != nil {
-					return fmt.Errorf("cannot parse %v (type %T) as map key of type %s: %v)", index[0], index[0], k, err)
-				}
-				if vv := v.MapIndex(reflect.ValueOf(idx).Convert(k)); vv.IsValid() {
+				if vv := v.MapIndex(idxv.Convert(k)); vv.IsValid() {
 					return Q(vv.Interface(), index[1:]...)
 				}
 				return nil
