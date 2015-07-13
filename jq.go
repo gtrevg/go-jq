@@ -144,9 +144,8 @@ func Q(root interface{}, index ...interface{}) interface{} {
 					return Q(vv.Interface(), index[1:]...)
 				}
 				return nil
-			default:
-				return fmt.Errorf("cannot use %v (type %T) as map key of type %s", index[0], index[0], k)
 			}
+			return fmt.Errorf("cannot use %v (type %T) as map key of type %s", index[0], index[0], k)
 
 		case reflect.Uint, reflect.Uintptr, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 			reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -176,13 +175,10 @@ func Q(root interface{}, index ...interface{}) interface{} {
 					return Q(vv.Interface(), index[1:]...)
 				}
 				return nil
-			default:
-				return fmt.Errorf("cannot use %v (type %T) as map key of type %s", index[0], index[0], k)
 			}
-
-		default:
-			return fmt.Errorf("map key type %s not supported", k)
+			return fmt.Errorf("cannot use %v (type %T) as map key of type %s", index[0], index[0], k)
 		}
+		return fmt.Errorf("map key type %s not supported", v.Type().Key())
 
 	case reflect.Array, reflect.Slice:
 		switch i := reflect.ValueOf(index[0]); i.Kind() {
@@ -205,9 +201,8 @@ func Q(root interface{}, index ...interface{}) interface{} {
 				return Q(v.Index(int(idx)).Interface(), index[1:]...)
 			}
 			return nil
-		default:
-			return fmt.Errorf("cannot use %v (type %T) as array index", index[0], index[0])
 		}
+		return fmt.Errorf("cannot use %v (type %T) as array index", index[0], index[0])
 	}
 
 	return fmt.Errorf("type %T does not support indexing", root)
