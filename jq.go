@@ -237,6 +237,43 @@ func String(root interface{}, index ...interface{}) string {
 	return ""
 }
 
+// Bool returns the truth value according to javascript rules.
+func Bool(root interface{}, index ...interface{}) bool {
+	switch vv := Q(root, index...).(type) {
+	case string:
+		return vv != ""
+	case bool:
+		return vv
+	case int:
+		return vv != 0
+	case int8:
+		return vv != 0
+	case int16:
+		return vv != 0
+	case int32:
+		return vv != 0
+	case int64:
+		return vv != 0
+	case uint:
+		return vv != 0
+	case uint8:
+		return vv != 0
+	case uint16:
+		return vv != 0
+	case uint32:
+		return vv != 0
+	case uint64:
+		return vv != 0
+	case json.Number:
+		n, err := vv.Int64()
+		if err != nil {
+			return false
+		}
+		return n != 0
+	}
+	return false
+}
+
 // Int returns the integer found at path or 0 in all other cases.
 // Integers of any size and sign are cast to plain int, with possible loss of information.
 // Int also handles the json.Number type that may be returned by json.Unmarshal.

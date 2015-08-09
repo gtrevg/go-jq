@@ -214,3 +214,9 @@ func TestInt(t *testing.T) {
 		t.Errorf("%#v [%q]:  expected %v, got %v (%T)", testStruct, "subobj/subsubobj/bar", 1, v, v)
 	}
 }
+
+func TestBool(t *testing.T) {
+	if v := Bool(testStruct, "subobj", "subsubobj", "bar"); !v {
+		t.Errorf("%#v [%q]:  expected %v, got %v (%T)", testStruct, "subobj/subsubobj/bar", 1, v, v)
+	}
+}
